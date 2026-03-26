@@ -3,3 +3,5 @@ pandas
 openpyxl
 docx-mailmerge2
 num2words
+comtypes
+libreoffice
