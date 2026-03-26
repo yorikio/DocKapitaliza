@@ -10,7 +10,6 @@ def generar_paquete_zip(df, plantilla_bytes):
     zip_buffer = BytesIO()
     
     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
-        # Usamos un directorio temporal para la conversión
         with tempfile.TemporaryDirectory() as temp_dir:
             for _, fila in df.iterrows():
                 nombre_raw = str(fila['Nombre Cliente']).upper()
@@ -24,28 +23,34 @@ def generar_paquete_zip(df, plantilla_bytes):
                     'Fecha_Emision': obtener_fecha_formal()
                 }
                 
-                # 1. Crear el Word temporal
+                # 1. Crear el archivo Word en el directorio temporal
                 path_word = os.path.join(temp_dir, f"PAGARE_{nombre_archivo}.docx")
                 with MailMerge(BytesIO(plantilla_bytes)) as document:
                     document.merge(**datos_contrato)
                     document.write(path_word)
                 
-                # 2. Convertir a PDF usando LibreOffice (Comando de sistema)
+                # --- CAMBIO AQUÍ: Guardar el Word en el ZIP siempre ---
+                with open(path_word, "rb") as f_word:
+                    zip_file.writestr(f"PAGARE_{nombre_archivo}.docx", f_word.read())
+                
+                # 2. Intentar la conversión a PDF
                 try:
+                    # En Streamlit Cloud (Linux) el comando suele ser 'libreoffice'
                     subprocess.run([
-                        'lowriter', '--headless', '--convert-to', 'pdf', 
+                        'libreoffice', '--headless', '--convert-to', 'pdf', 
                         '--outdir', temp_dir, path_word
                     ], check=True, capture_output=True)
                     
                     path_pdf = path_word.replace(".docx", ".pdf")
                     
-                    # 3. Leer el PDF generado y meterlo al ZIP
-                    with open(path_pdf, "rb") as f:
-                        zip_file.writestr(f"PAGARE_{nombre_archivo}.pdf", f.read())
+                    # 3. Guardar el PDF generado en el ZIP
+                    if os.path.exists(path_pdf):
+                        with open(path_pdf, "rb") as f_pdf:
+                            zip_file.writestr(f"PAGARE_{nombre_archivo}.pdf", f_pdf.read())
                         
                 except Exception as e:
-                    # Si falla el PDF, al menos metemos el Word para no perder el trabajo
-                    with open(path_word, "rb") as f:
-                        zip_file.writestr(f"PAGARE_{nombre_archivo}.docx", f.read())
+                    # Si el PDF falla, ya tenemos el Word arriba, 
+                    # podrías opcionalmente registrar el error para debugging
+                    print(f"No se pudo generar PDF para {nombre_raw}: {e}")
 
     return zip_buffer.getvalue()
