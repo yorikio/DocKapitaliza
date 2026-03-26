@@ -1,39 +1,45 @@
 import streamlit as st
 import pandas as pd
-from mailmerge import MailMerge
-from io import BytesIO
+import os
+from processor import generar_paquete_zip
 
-st.title("Generador de Documentos Kapitaliza")
+st.set_page_config(page_title="Generador de Pagarés | Kapitaliza", layout="wide")
 
-# 1. Carga de archivos
-uploaded_template = st.file_uploader("Sube tu plantilla Word (.docx)", type="docx")
-uploaded_data = st.file_uploader("Sube tu archivo Excel (.xlsx)", type="xlsx")
+st.title("🚀 Sistema de Pagarés Automáticos - Kapitaliza")
 
-if uploaded_template and uploaded_data:
+# Nombre del archivo que debe estar en tu repositorio
+NOMBRE_PLANTILLA = "plantilla_pagare_kapitaliza.docx"
+
+# Verificamos si la plantilla existe en la raíz
+if not os.path.exists(NOMBRE_PLANTILLA):
+    st.error(f"❌ Error: No se encontró el archivo '{NOMBRE_PLANTILLA}' en el servidor.")
+    st.stop()
+
+st.info("Sube el Excel con las columnas: 'Cuota', 'Nombre Cliente' y 'Dirección'")
+
+uploaded_data = st.file_uploader("Sube tu Base de Datos (.xlsx)", type="xlsx")
+
+if uploaded_data:
     df = pd.read_excel(uploaded_data)
     
-    # Mostrar vista previa de los datos
-    st.write("Datos detectados:", df.head())
-    
-    if st.button("Generar Documentos"):
-        # Leer la plantilla desde memoria
-        template_bytes = BytesIO(uploaded_template.read())
+    # Validación rápida de columnas para evitar errores de ejecución
+    columnas_requeridas = ['Cuota', 'Nombre Cliente', 'Dirección']
+    if all(col in df.columns for col in columnas_requeridas):
+        st.success(f"✅ Se cargaron {len(df)} registros correctamente.")
         
-        # Crear un archivo Word final en memoria para contener todos los cruces
-        output_stream = BytesIO()
-        
-        with MailMerge(template_bytes) as document:
-            # Convertir el DataFrame a una lista de diccionarios (clave = nombre del MergeField)
-            data_to_merge = df.to_dict(orient='records')
-            
-            # Realizar el cruce (crea una página nueva por cada fila del Excel)
-            document.merge_pages(data_to_merge)
-            document.write(output_stream)
-        
-        # Botón para descargar el Word resultante
-        st.download_button(
-            label="Descargar Documentos Generados",
-            data=output_stream.getvalue(),
-            file_name="correspondencia_final.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+        if st.button("Generar y Descargar Paquete ZIP"):
+            with st.spinner("Procesando documentos..."):
+                # Leemos la plantilla estática del disco
+                with open(NOMBRE_PLANTILLA, "rb") as f:
+                    plantilla_bytes = f.read()
+                
+                zip_final = generar_paquete_zip(df, plantilla_bytes)
+                
+                st.download_button(
+                    label="📥 Descargar todos los Pagarés",
+                    data=zip_final,
+                    file_name="Paquete_Pagares_Kapitaliza.zip",
+                    mime="application/zip"
+                )
+    else:
+        st.warning(f"⚠️ El Excel debe contener exactamente las columnas: {', '.join(columnas_requeridas)}")
