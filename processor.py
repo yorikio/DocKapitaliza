@@ -5,6 +5,7 @@ import tempfile
 from io import BytesIO
 from mailmerge import MailMerge
 from utils import monto_a_letra, obtener_fecha_formal
+import pandas as pd
 
 def generar_paquete_zip(df, plantilla_bytes):
     zip_buffer = BytesIO()
