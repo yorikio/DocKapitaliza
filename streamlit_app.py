@@ -23,7 +23,19 @@ if uploaded_data:
     df = pd.read_excel(uploaded_data)
     
     # Validación rápida de columnas para evitar errores de ejecución
-    columnas_requeridas = ['Cuota', 'Nombre Cliente', 'Dirección']
+    columnas_requeridas = [
+        'Cuota', 
+        'Nombre Cliente', 
+        'Calle Cliente', 
+        'Número Exterior Cliente', 
+        'Número Interior Cliente', 
+        'Colonia Cliente', 
+        'Municipio Cliente', 
+        'Localidad Cliente', 
+        'Código Postal Cliente', 
+        'Estado Cliente',
+        'Pais Cliente'
+    ]
     if all(col in df.columns for col in columnas_requeridas):
         st.success(f"✅ Se cargaron {len(df)} registros correctamente.")
         
