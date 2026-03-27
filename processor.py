@@ -14,12 +14,27 @@ def generar_paquete_zip(df, plantilla_bytes):
             for _, fila in df.iterrows():
                 nombre_raw = str(fila['Nombre Cliente']).upper()
                 nombre_archivo = nombre_raw.replace(" ", "_")
+                # Construcción dinámica de la dirección
+                partes_direccion = [
+                    str(fila['Calle Cliente']),
+                    f"#{fila['Número Exterior Cliente']}",
+                    f"Int. {fila['Número Interior Cliente']}" if pd.notna(fila['Número Interior Cliente']) else "",
+                    f"Col. {fila['Colonia Cliente']}",
+                    str(fila['Localidad Cliente']),
+                    str(fila['Municipio Cliente']),
+                    f"C.P. {fila['Código Postal Cliente']}",
+                    str(fila['Estado Cliente']),
+                    str(fila['Pais Cliente'])
+                ]
+                
+                # Unimos solo las partes que no estén vacías con una coma y espacio
+                direccion_completa = ", ".join([p for p in partes_direccion if str(p).strip() and p != "nan"])
                 
                 datos_contrato = {
                     'Nombre_Cliente': nombre_raw,
                     'Monto_Numero': f"${fila['Cuota']:,.2f}",
                     'Monto_Letra': monto_a_letra(fila['Cuota']),
-                    'Direccion_Cliente': str(fila['Dirección']).upper(),
+                    'Direccion_Cliente': direccion_completa.upper(),
                     'Fecha_Emision': obtener_fecha_formal()
                 }
                 
